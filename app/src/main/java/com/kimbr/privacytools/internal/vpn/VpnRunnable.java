@@ -63,6 +63,7 @@ public class VpnRunnable implements Runnable {
 
                         final Packet packet = new Packet(bufferToNetwork);
                         if (filterMap != null) {
+                            // TODO: look into deciphering ip4header first so blocked hosts don't have tcp/udp deciphered since not needed anyway
                             final String hostUrl = packet.ip4Header.destinationAddress.getHostName();
                             filterResult = filterMap.containsKey(hostUrl) ? filterMap.get(hostUrl) : null;
 
