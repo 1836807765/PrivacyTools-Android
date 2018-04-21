@@ -52,8 +52,15 @@ public class MainActivity extends Activity {
                 loggingButton.setEnabled(false);
                 if (isChecked) LocalVpnService.Handler.setLoggingCallback(new LoggingCallback() {
                     @Override
-                    public void log(Packet packet) {
-                        Log.d("LoggingCallback", "Source:" + packet.ip4Header.sourceAddress.getHostName() + ", Destination:" + packet.ip4Header.destinationAddress.getHostName());
+                    public void log(Packet packet, Boolean filterResult) {
+                        if (filterResult == null)
+                            Log.d("LoggingCallback", packet.ip4Header.destinationAddress.getHostName());
+                        else {
+                            if (filterResult)
+                                Log.d("LoggingCallback", "Whitelisted: " + packet.ip4Header.destinationAddress.getHostName());
+                            else
+                                Log.d("LoggingCallback", "Blacklisted: " + packet.ip4Header.destinationAddress.getHostName());
+                        }
                     }
                 });
                 else LocalVpnService.Handler.setLoggingCallback(null);

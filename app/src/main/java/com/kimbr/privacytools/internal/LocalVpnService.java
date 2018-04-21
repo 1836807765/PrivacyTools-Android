@@ -21,25 +21,27 @@ import com.kimbr.privacytools.internal.vpn.network.UDPOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Selector;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class LocalVpnService extends VpnService {
 
+    private static String TAG = "LocalVpnService";
+
     private static volatile LocalVpnService instance; // TODO: improve performance of holding onto it's own reference?
     private static IsRunningCallback isRunningCb;
     private static LoggingCallback loggingCallback;
 
-    private static String TAG = "LocalVpnService";
     private static String VPN_ADDRESS = "10.1.10.1"; // TODO: improve, is only ipv4 for now
     private static String VPN_ROUTE = "0.0.0.0"; // Intercepts everything
-
     private static String DNS_ADDRESS_0 = "1.1.1.1";
     private static String DNS_ADDRESS_1 = "1.0.0.1";
 
     private ExecutorService tunnelExecutorService;
     private ParcelFileDescriptor vpnInterface;
+    private Map<String, Boolean> filterMap;
 
     private ConcurrentLinkedQueue<Packet> deviceToNetworkUdpQueue;
     private ConcurrentLinkedQueue<Packet> deviceToNetworkTcpQueue;
@@ -94,6 +96,7 @@ public class LocalVpnService extends VpnService {
 
             final VpnRunnable vpnRunnable = new VpnRunnable(vpnInterface.getFileDescriptor(), deviceToNetworkUdpQueue, deviceToNetworkTcpQueue, networkToDeviceQueue);
             vpnRunnable.loggingCallback = loggingCallback; // reduces having to use an 'if' to check for loggingCallback != null
+            vpnRunnable.filterMap = filterMap;
             tunnelExecutorService.submit(vpnRunnable);
 
             if (isRunningCb != null) isRunningCb.started();
@@ -124,8 +127,8 @@ public class LocalVpnService extends VpnService {
             final Builder builder = new Builder();
             builder.setSession(getString(R.string.app_name));
             builder.addAddress(VPN_ADDRESS, 32);
-//            builder.addDnsServer(DNS_ADDRESS_0);
-//            builder.addDnsServer(DNS_ADDRESS_1);
+            builder.addDnsServer(DNS_ADDRESS_0);
+            builder.addDnsServer(DNS_ADDRESS_1);
             builder.addRoute(VPN_ROUTE, 0);
             builder.setConfigureIntent(getPendingIntent());
             vpnInterface = builder.establish();
@@ -161,6 +164,10 @@ public class LocalVpnService extends VpnService {
             }
         }
 
+        public static void setFilterMap(Map<String, Boolean> map) {
+            instance.filterMap = map;
+        }
+
         public static boolean isRunning() {
             return instance != null;
         }
@@ -177,13 +184,4 @@ public class LocalVpnService extends VpnService {
         void started();
         void stopped();
     }
-
-    // C++ methods
-    private native void jni_start(long context);
-
-    private native void jni_stop(long context);
-
-    private native void jni_run(long context, int tun);
-
-    private native void jni_clear(long context);
 }
